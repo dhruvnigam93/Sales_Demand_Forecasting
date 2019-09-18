@@ -1,0 +1,40 @@
+---
+title: "Demand Forecasting"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(zoo)
+```
+
+
+## Exploratory data analysis
+
+```{r}
+train_data = read.csv("train.csv" , stringsAsFactors = F)
+head(train_data)
+```
+
+No NA values - the heavens have ssmiled upon us - it is quite rare to find data like this.  However the store and item numbers are being read as numeric variable instead of factor variables - we need to fix that.
+```{r}
+train_data$store = as.character(train_data$store)
+train_data$item = as.character(train_data$item)
+train_data$date = as.Date(train_data$date)
+table(train_data[c("store", "item")])
+
+```
+
+Again very consistent data - all stores have observations for all items 
+
+```{r}
+
+train_data %>%
+  mutate(month = as.yearmon(date)) %>%
+  group_by(month) %>%
+  summarise( total_sales = sum(sales) ) %>%
+  ggplot() +geom_line(aes(x = month , y = total_sales))
+
+```
+
+
