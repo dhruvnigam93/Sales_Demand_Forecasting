@@ -6,6 +6,7 @@ output: html_notebook
 ```{r}
 library(tidyverse)
 library(zoo)
+library(lubridate)
 ```
 
 
@@ -28,13 +29,73 @@ table(train_data[c("store", "item")])
 Again very consistent data - all stores have observations for all items 
 
 ```{r}
-
 train_data %>%
   mutate(month = as.yearmon(date)) %>%
   group_by(month) %>%
   summarise( total_sales = sum(sales) ) %>%
-  ggplot() +geom_line(aes(x = month , y = total_sales))
-
+  ggplot() +geom_line(aes(x = month , y = total_sales)) + ggtitle("Monthly Sales - Total")
+```
+Two components
+```{r}
+train_data %>%
+  mutate(year =  as.numeric(format.Date( train_data$date , format = "%Y")) ) %>%
+  group_by(year) %>%
+  summarise( total_sales = sum(sales) ) %>%
+  ggplot() +geom_line(aes(x = year , y = total_sales)) + ggtitle("Yearly Sales - Total")
+```
+Trend in sales yearly - Sales increasing every year
+```{r}
+train_data %>%
+  group_by(date) %>%
+  summarize(total_daily_sales = sum(sales)) %>%
+  mutate(week =  week(date) , year = year(date) ,day =  weekdays(date) ) %>%
+  group_by(week, year) %>%
+  mutate( normalized_sales = total_daily_sales/ sum(total_daily_sales) ) %>%
+  group_by(day) %>%
+  summarize(avg_normalied_sales = mean(normalized_sales , na.rm = T)) %>%
+  mutate(day = factor(day , levels = c("Monday" , "Tuesday","Wednesday", "Thursday" , "Friday", "Saturday" , "Sunday"))) %>%
+  ggplot() +geom_bar(aes(x = day , y = avg_normalied_sales) , stat = "identity") + ggtitle("Yearly Sales - Total") +
+  scale_y_continuous(labels = scales::percent)
 ```
 
 
+
+
+```{r}
+train_data %>%
+  group_by(date) %>%
+  summarize(total_daily_sales = sum(sales)) %>%
+  mutate(month =  month(date) , year = year(date) ,day =  weekdays(date) ) %>%
+  group_by(month, year) %>%
+  mutate( normalized_sales = total_daily_sales/ sum(total_daily_sales) ) %>%
+  group_by(day) %>%
+  summarize(avg_normalied_sales = mean(normalized_sales , na.rm = T)) %>%
+  mutate(day = factor(day , levels = c("Monday" , "Tuesday","Wednesday", "Thursday" , "Friday", "Saturday" , "Sunday"))) %>%
+  ggplot() +geom_bar(aes(x = day , y = avg_normalied_sales) , stat = "identity") + ggtitle("Weekly Trend") +
+  scale_y_continuous(labels = scales::percent)
+```
+A weekly effectt is apparant where sales increase as the week goes by - maxiumum on weekends.
+
+```{r}
+total_sales_by_week = train_data %>%
+  mutate(week =  week(date) , year = year(date)) %>%
+  group_by(year,week) %>%
+  summarize( total_sales =sum(sales))
+
+acf(total_sales_by_week$total_sales, lag.max = 104)
+```
+
+```{r}
+total_sales_by_month = train_data %>%
+  mutate(month =  month(date) , year = year(date)) %>%
+  group_by(year,month) %>%
+  summarize( total_sales =sum(sales))
+
+acf(total_sales_by_month$total_sales)
+```
+
+Yearly seasonality is apprant in the total sales
+
+formula = (beta_yer* year + alpha_year)()
+
+log(sales) = (beta_yer* year + alpha_year)
